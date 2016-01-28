@@ -1,5 +1,7 @@
 package sudoku;
 
+import org.eclipse.jdt.annotation.NonNull;
+
 public class SudokuField {
 	public static final byte EMPTY = 0;
 	public static final byte MAX = 9;
@@ -75,7 +77,7 @@ public class SudokuField {
 	 *            current cell
 	 * @return cell next to current cell
 	 */
-	public static SudokuPosition getNextPosition(final SudokuPosition pos) {
+	public static SudokuPosition getNextPosition(final @NonNull SudokuPosition pos) {
 		byte row = pos.getRow();
 		byte column = pos.getColumn();
 
@@ -121,6 +123,32 @@ public class SudokuField {
 		return (byte) (((row / 3) * 3) + (column / 3) + 1);
 	}
 
+	/**
+	 * Load sudoku field from String.
+	 *
+	 * @param sudokuField
+	 */
+	public static SudokuField loadFromString(final @NonNull String sudokuField) {
+		byte[][] field = new byte[MAX][MAX];
+		String[] lines = sudokuField.split(System.lineSeparator());
+		for (int row = 0; row < MAX; row++) {
+			int rowIndex = 1 + row + (row / 3);
+			for (int column = 0; column < MAX; column++) {
+				// | 1 2 3 | 4 5 6 |
+				int columnIndex = 3 + (column * 3) + (column / 3 * 3);
+				char c = lines[rowIndex].charAt(columnIndex);
+
+				if (c == ' ') {
+					field[row][column] = EMPTY;
+				} else {
+					field[row][column] = (byte) Integer.parseInt(String.valueOf(c));
+				}
+			}
+		}
+
+		return new SudokuField(field);
+	}
+
 	private byte[][] field;
 
 	private boolean[][][] options;
@@ -138,7 +166,7 @@ public class SudokuField {
 	 *
 	 * @param field
 	 */
-	public SudokuField(byte[][] field) {
+	public SudokuField(final @NonNull byte[][] field) {
 		initialize(field);
 	}
 
@@ -186,7 +214,7 @@ public class SudokuField {
 	 * @param pos
 	 * @return Number of all available options of specified cell.
 	 */
-	public byte countOptions(final SudokuPosition pos) {
+	public byte countOptions(final @NonNull SudokuPosition pos) {
 		byte num = 0;
 		for (boolean value : options[pos.getRow()][pos.getColumn()]) {
 			if (value) {
@@ -240,7 +268,7 @@ public class SudokuField {
 	 * @param pos
 	 * @return value of next option or EMPTY (0) if no options left
 	 */
-	public byte getNextOption(final SudokuPosition pos) {
+	public byte getNextOption(final @NonNull SudokuPosition pos) {
 		byte row = pos.getRow();
 		byte column = pos.getColumn();
 
@@ -268,7 +296,7 @@ public class SudokuField {
 	 * @param column
 	 * @return
 	 */
-	public byte getValue(final SudokuPosition pos) {
+	public byte getValue(final @NonNull SudokuPosition pos) {
 		return field[pos.getRow()][pos.getColumn()];
 	}
 
@@ -431,7 +459,7 @@ public class SudokuField {
 	 * @param value
 	 *            the number [1-9] that should be removed as option
 	 */
-	public void removeOption(final SudokuPosition pos, final byte value) {
+	public void removeOption(final @NonNull SudokuPosition pos, final byte value) {
 		removeOption(pos.getRow(), pos.getColumn(), value);
 	}
 
@@ -481,14 +509,12 @@ public class SudokuField {
 	 * @param value
 	 *            the number [1-9] that should be placed
 	 */
-	public void setValue(final SudokuPosition pos, final byte value) {
+	public void setValue(final @NonNull SudokuPosition pos, final byte value) {
 		setValue(pos.getRow(), pos.getColumn(), value);
 	}
 
 	/**
-	 * Print Sudoku to sysout.
-	 *
-	 * @param sudokuField
+	 * Print Sudoku to String.
 	 */
 	@Override
 	public String toString() {
@@ -496,9 +522,10 @@ public class SudokuField {
 	}
 
 	/**
-	 * Print Sudoku to sysout.
+	 * Print Sudoku to String.
 	 *
-	 * @param sudokuField
+	 * @param highlightRow
+	 * @param highlightColumn
 	 */
 	public String toString(final byte highlightRow, final byte highlightColumn) {
 		StringBuilder sb = new StringBuilder();

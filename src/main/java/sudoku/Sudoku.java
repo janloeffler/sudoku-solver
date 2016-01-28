@@ -20,8 +20,19 @@ public class Sudoku {
 	 * @param predefinedFields
 	 *            Amount of fields that should be prefilled
 	 */
-	public Sudoku(int predefinedFields) {
+	public Sudoku(final int predefinedFields) {
 		generate(predefinedFields);
+	}
+
+	/**
+	 * Load sudoku field from String.
+	 *
+	 * @param sudokuField
+	 */
+	public Sudoku(final String sudokuField) {
+		if (sudokuField != null) {
+			field = SudokuField.loadFromString(sudokuField);
+		}
 	}
 
 	/**
@@ -30,11 +41,12 @@ public class Sudoku {
 	 * @param predefinedFields
 	 *            Amount of fields that should be prefilled
 	 */
-	public void generate(int predefinedFields) {
+	private void generate(final int predefinedFields) {
 		field = new SudokuField();
 
 		Random r = new Random();
 		byte fieldsFilled = 0;
+		int tries = 0;
 		while (fieldsFilled < predefinedFields) {
 			byte row = (byte) r.nextInt(SudokuField.MAX);
 			byte column = (byte) r.nextInt(SudokuField.MAX);
@@ -43,6 +55,11 @@ public class Sudoku {
 				byte value = (byte) (r.nextInt(SudokuField.MAX) + 1);
 				while (!field.isOption(row, column, value)) {
 					value = (byte) (r.nextInt(SudokuField.MAX) + 1);
+					tries++;
+
+					// prevent an infinite loop for unsolvable sudokus.
+					if (tries > (9 * 9 * 9))
+						return;
 				}
 
 				field.setValue(row, column, value);
@@ -147,5 +164,13 @@ public class Sudoku {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Print Sudoku field to String.
+	 */
+	@Override
+	public String toString() {
+		return field.toString();
 	}
 }

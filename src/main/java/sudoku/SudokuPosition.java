@@ -1,6 +1,5 @@
 package sudoku;
 
-
 public final class SudokuPosition {
 	/**
 	 * Sudoku start position on top-left (0, 0).
@@ -34,7 +33,7 @@ public final class SudokuPosition {
 	}
 
 	public boolean equals(final SudokuPosition pos) {
-		return (pos.getRow() == row) && (pos.getColumn() == column);
+		return (pos != null) && (pos.getRow() == row) && (pos.getColumn() == column);
 	}
 
 	public byte getColumn() {

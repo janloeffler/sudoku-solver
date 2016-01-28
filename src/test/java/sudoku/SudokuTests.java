@@ -1,5 +1,6 @@
 package sudoku;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
@@ -129,5 +130,25 @@ public class SudokuTests {
 		assertTrue(SudokuField.getSector(6, 6) == 9);
 		assertTrue(SudokuField.getSector(7, 7) == 9);
 		assertTrue(SudokuField.getSector(8, 8) == 9);
+	}
+
+	@Test
+	public void testLoadFieldFromString() {
+		SudokuField fieldBefore = new SudokuField();
+		fieldBefore.setValue((byte) 0, (byte) 0, (byte) 1);
+		fieldBefore.setValue((byte) 1, (byte) 1, (byte) 2);
+		fieldBefore.setValue((byte) 2, (byte) 2, (byte) 3);
+		fieldBefore.setValue((byte) 3, (byte) 3, (byte) 4);
+		fieldBefore.setValue((byte) 4, (byte) 4, (byte) 5);
+		fieldBefore.setValue((byte) 5, (byte) 5, (byte) 6);
+		fieldBefore.setValue((byte) 6, (byte) 6, (byte) 7);
+		fieldBefore.setValue((byte) 7, (byte) 7, (byte) 8);
+		fieldBefore.setValue((byte) 8, (byte) 8, (byte) 9);
+
+		String fieldAsTextBefore = fieldBefore.toString();
+		SudokuField fieldAfter = SudokuField.loadFromString(fieldAsTextBefore);
+		String fieldAsTextAfter = fieldAfter.toString();
+
+		assertEquals(fieldAsTextBefore, fieldAsTextAfter);
 	}
 }

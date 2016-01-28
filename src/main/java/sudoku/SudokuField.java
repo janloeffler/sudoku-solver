@@ -77,7 +77,10 @@ public class SudokuField {
 	 *            current cell
 	 * @return cell next to current cell
 	 */
-	public static SudokuPosition getNextPosition(final @NonNull SudokuPosition pos) {
+	public static SudokuPosition getNextPosition(final SudokuPosition pos) {
+		if (pos == null)
+			return SudokuPosition.START;
+
 		byte row = pos.getRow();
 		byte column = pos.getColumn();
 
@@ -149,43 +152,93 @@ public class SudokuField {
 		return new SudokuField(field);
 	}
 
-	private byte[][] field;
+	/**
+	 * Store the field. Empty cells contain a 0 as number.
+	 */
+	private final byte[][] field;
 
-	private boolean[][][] options;
+	/**
+	 * Store all remaining options per cell.
+	 */
+	private final boolean[][][] options;
 
-	private int remaining = 0;
+	/**
+	 * Store remaining options for each cell.
+	 */
+	private final byte[][] remaining;
+
+	/**
+	 * Store all remaining options of all cells.
+	 */
+	private int remainingTotal = 0;
 
 	/**
 	 *
 	 */
 	public SudokuField() {
-		initialize();
+		field = new byte[MAX][MAX];
+		remaining = new byte[MAX][MAX];
+		options = new boolean[MAX][MAX][MAX];
+		remainingTotal = MAX * MAX;
+
+		for (byte row = 0; row < MAX; row++) {
+			for (byte column = 0; column < MAX; column++) {
+				// reset field
+				field[row][column] = EMPTY;
+
+				remaining[row][column] = MAX;
+
+				// reset all options by enabling them
+				for (byte value = 0; value < MAX; value++) {
+					options[row][column][value] = true;
+				}
+			}
+		}
 	}
 
 	/**
 	 *
-	 * @param field
+	 * @param predefinedField
 	 */
-	public SudokuField(final @NonNull byte[][] field) {
-		initialize(field);
-	}
+	public SudokuField(final @NonNull byte[][] predefinedField) {
+		this();
 
-	@Override
-	public SudokuField clone() {
-		SudokuField newField = new SudokuField(field);
-
-		// we need also to clone the options correctly
+		// if field should be preset, set all values
 		for (byte row = 0; row < MAX; row++) {
 			for (byte column = 0; column < MAX; column++) {
-				for (byte value = MIN; value <= MAX; value++) {
-					if (!options[row][column][value - 1]) {
-						newField.removeOption(row, column, value);
-					}
+				setValue(row, column, predefinedField[row][column]);
+			}
+		}
+	}
+
+	public SudokuField(final @NonNull SudokuField fromField) {
+		field = new byte[MAX][MAX];
+		remaining = new byte[MAX][MAX];
+		options = new boolean[MAX][MAX][MAX];
+		remainingTotal = MAX * MAX;
+
+		for (byte row = 0; row < MAX; row++) {
+			for (byte column = 0; column < MAX; column++) {
+				// copy values
+				field[row][column] = fromField.field[row][column];
+
+				// copy remaining options per cell
+				remaining[row][column] = fromField.remaining[row][column];
+
+				// copy options
+				for (byte value = 0; value < MAX; value++) {
+					options[row][column][value] = fromField.options[row][column][value];
 				}
 			}
 		}
 
-		return newField;
+		// copy remaining
+		remainingTotal = fromField.remainingTotal;
+	}
+
+	@Override
+	public SudokuField clone() {
+		return new SudokuField(this);
 	}
 
 	/**
@@ -197,11 +250,7 @@ public class SudokuField {
 		int num = 0;
 		for (byte row = 0; row < MAX; row++) {
 			for (byte column = 0; column < MAX; column++) {
-				for (boolean value : options[row][column]) {
-					if (value) {
-						num++;
-					}
-				}
+				num += remaining[row][column];
 			}
 		}
 
@@ -215,14 +264,7 @@ public class SudokuField {
 	 * @return Number of all available options of specified cell.
 	 */
 	public byte countOptions(final @NonNull SudokuPosition pos) {
-		byte num = 0;
-		for (boolean value : options[pos.getRow()][pos.getColumn()]) {
-			if (value) {
-				num++;
-			}
-		}
-
-		return num;
+		return remaining[pos.getRow()][pos.getColumn()];
 	}
 
 	/**
@@ -231,7 +273,7 @@ public class SudokuField {
 	 * @return Number of empty cells.
 	 */
 	public int countRemaining() {
-		return remaining;
+		return remainingTotal;
 	}
 
 	/**
@@ -241,20 +283,21 @@ public class SudokuField {
 	 *            position to start
 	 * @return cell that is empty or null if no empty cell can be found
 	 */
-	public SudokuPosition getNextEmptyPosition(SudokuPosition pos) {
+	public SudokuPosition getNextEmptyPosition(final SudokuPosition pos) {
 		// if pos == null, test start position first
 		if (pos == null) {
-			pos = SudokuPosition.START;
-			if (field[pos.getRow()][pos.getColumn()] == EMPTY)
-				return pos;
+			if (field[SudokuPosition.START.getRow()][SudokuPosition.START.getColumn()] == EMPTY)
+				return SudokuPosition.START;
 		}
+
+		SudokuPosition nextEmptyPosition = pos;
 
 		int i = 0;
 		while (i < (MAX * MAX)) {
-			pos = getNextPosition(pos);
+			nextEmptyPosition = getNextPosition(nextEmptyPosition);
 
-			if (pos == null || field[pos.getRow()][pos.getColumn()] == EMPTY)
-				return pos;
+			if (nextEmptyPosition == null || field[nextEmptyPosition.getRow()][nextEmptyPosition.getColumn()] == EMPTY)
+				return nextEmptyPosition;
 
 			i++;
 		}
@@ -272,9 +315,9 @@ public class SudokuField {
 		byte row = pos.getRow();
 		byte column = pos.getColumn();
 
-		for (byte value = MIN; value <= MAX; value++) {
-			if (options[row][column][value - 1])
-				return value;
+		for (byte value = 0; value < MAX; value++) {
+			if (options[row][column][value])
+				return (byte) (value + 1);
 		}
 
 		return EMPTY;
@@ -298,45 +341,6 @@ public class SudokuField {
 	 */
 	public byte getValue(final @NonNull SudokuPosition pos) {
 		return field[pos.getRow()][pos.getColumn()];
-	}
-
-	/**
-	 * Create an empty sudoku field and initialize all cells with 0.
-	 */
-	public void initialize() {
-		initialize(null);
-	}
-
-	/**
-	 * Create an empty sudoku field and initialize all cells with 0.
-	 *
-	 * @throws Exception
-	 */
-	public void initialize(final byte[][] predefinedField) {
-		field = new byte[MAX][MAX];
-		options = new boolean[MAX][MAX][MAX];
-		remaining = MAX * MAX;
-
-		for (byte row = 0; row < MAX; row++) {
-			for (byte column = 0; column < MAX; column++) {
-				// reset field
-				field[row][column] = EMPTY;
-
-				// reset all options by enabling them
-				for (byte value = MIN; value <= MAX; value++) {
-					options[row][column][value - 1] = true;
-				}
-			}
-		}
-
-		// if field should be preset, set all values
-		if (predefinedField != null) {
-			for (byte row = 0; row < MAX; row++) {
-				for (byte column = 0; column < MAX; column++) {
-					setValue(row, column, predefinedField[row][column]);
-				}
-			}
-		}
 	}
 
 	/**
@@ -446,7 +450,10 @@ public class SudokuField {
 	 *            the number [1-9] that should be removed as option
 	 */
 	public void removeOption(final byte row, final byte column, final byte value) {
-		options[row][column][value - 1] = false;
+		if (options[row][column][value - 1]) {
+			options[row][column][value - 1] = false;
+			remaining[row][column]--;
+		}
 	}
 
 	/**
@@ -475,26 +482,38 @@ public class SudokuField {
 	 */
 	public void setValue(final byte row, final byte column, final byte value) {
 		field[row][column] = value;
+
 		if (value > EMPTY) {
 			byte sector = getSector(row, column);
-			remaining--;
+			remainingTotal--;
+			remaining[row][column] = 0;
 
 			// reset all options for the current cell
-			for (byte currentValue = MIN; currentValue <= MAX; currentValue++) {
-				options[row][column][currentValue - 1] = false;
+			for (byte currentValue = 0; currentValue < MAX; currentValue++) {
+				options[row][column][currentValue] = false;
 			}
 
+			byte valueIndex = (byte) (value - 1);
 			for (byte i = 0; i < MAX; i++) {
 				// remove currentValue from currentRow
-				options[i][column][value - 1] = false;
+				if (options[i][column][valueIndex]) {
+					options[i][column][valueIndex] = false;
+					remaining[i][column]--;
+				}
 
 				// remove currentValue from currentColumn
-				options[row][i][value - 1] = false;
+				if (options[row][i][valueIndex]) {
+					options[row][i][valueIndex] = false;
+					remaining[row][i]--;
+				}
 
 				// remove currentValue from currentSector
 				byte currentRow = getRowBySectorPos(sector, i);
 				byte currentColumn = getColumnBySectorPos(sector, i);
-				options[currentRow][currentColumn][value - 1] = false;
+				if (options[currentRow][currentColumn][valueIndex]) {
+					options[currentRow][currentColumn][valueIndex] = false;
+					remaining[currentRow][currentColumn]--;
+				}
 			}
 		}
 	}

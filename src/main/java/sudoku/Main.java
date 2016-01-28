@@ -66,7 +66,6 @@ public class Main {
 	}
 
 	public static void main(String[] args) {
-		// testSudoku();
 		@NonNull
 		List<Sudoku> sudokuFields = loadFromFile(TEST_PLAN_FILE);
 		if (sudokuFields.isEmpty()) {

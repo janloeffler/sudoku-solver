@@ -96,12 +96,70 @@ public class Sudoku {
 	 * @return true if solved or false if not solvable
 	 */
 	public boolean solve() {
+		// as long as there are still empty cells
+		while (field.countRemainingEmptyCells() > 0) {
+
+			// check empty cells with least options first
+			SudokuPosition pos = field.getBestEmptyPosition();
+
+			// if no position found this path is wrong
+			if (pos == null)
+				return false;
+			else {
+				byte newValue = field.getNextOption(pos);
+				if (newValue == SudokuField.EMPTY) {
+
+					if (debugMode) {
+						System.out.println("no options left for " + pos);
+					}
+
+					return false;
+				}
+
+				SudokuField backupField = field.clone();
+				field.setValue(pos, newValue);
+
+				if (debugMode) {
+					field.print(pos);
+				}
+
+				// call solve again -> if result = true, then return true
+				// and puzzle is solved
+				if (solve())
+					return true;
+				else {
+					// else undo change
+					field = backupField;
+					field.removeOption(pos, newValue);
+
+					if (debugMode) {
+						System.out.println("UNDO value \"" + newValue + "\" at " + pos);
+					}
+				}
+			}
+		}
+
+		if (debugMode) {
+			System.out.println("*** SOLVED ***");
+		}
+
+		return true;
+	}
+
+	/**
+	 * Solve the current Sudoku field.
+	 *
+	 * @return true if solved or false if not solvable
+	 */
+	public boolean solveA() {
 		int depth = 1;
-		while (field.countRemaining() > 0) {
+
+		// as long as there are still empty cells
+		while (field.countRemainingEmptyCells() > 0) {
 
 			SudokuPosition pos = field.getNextEmptyPosition(null);
 			while (pos != null) {
-				byte numOptions = field.countOptions(pos);
+				byte numOptions = field.countRemainingOptions(pos);
 
 				// check all options that are allowed with current depth
 				while ((0 < numOptions) && (numOptions <= depth)) {
@@ -135,7 +193,7 @@ public class Sudoku {
 							System.out.println("UNDO value \"" + newValue + "\" at " + pos);
 						}
 
-						numOptions = field.countOptions(pos);
+						numOptions = field.countRemainingOptions(pos);
 					}
 				}
 

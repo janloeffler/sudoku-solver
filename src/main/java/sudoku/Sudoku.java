@@ -1,10 +1,42 @@
 package sudoku;
 
-import java.util.Random;
+import java.security.InvalidParameterException;
+
+import org.eclipse.jdt.annotation.NonNull;
 
 public class Sudoku {
 
-	private boolean debugMode = true;
+	/**
+	 * Amount of predefined cells for an easy game.
+	 */
+	public static final int PREDEFINED_EASY = 38;
+
+	/**
+	 * Amount of predefined cells for an extreme game.
+	 */
+	public static final int PREDEFINED_EXTREME = 20;
+
+	/**
+	 * Amount of predefined cells for a hard game.
+	 */
+	public static final int PREDEFINED_HARD = 28;
+
+	/**
+	 * Amount of predefined cells for a medium game.
+	 */
+	public static final int PREDEFINED_MEDIUM = 30;
+
+	/**
+	 * Amount of predefined cells for a quick game.
+	 */
+	public static final int PREDEFINED_VERY_EASY = 48;
+
+	/**
+	 * Amount of predefined cells for a very hard game.
+	 */
+	public static final int PREDEFINED_VERY_HARD = 26;
+
+	private boolean debugMode = false;
 	private SudokuField field = null;
 
 	/**
@@ -15,57 +47,91 @@ public class Sudoku {
 	}
 
 	/**
+	 * Load sudoku field from byte[][].
+	 *
+	 * @param predefinedField
+	 */
+	public Sudoku(final byte[][] predefinedField) {
+		if (predefinedField != null) {
+			field = new SudokuField(predefinedField);
+		} else {
+			field = new SudokuField();
+		}
+	}
+
+	/**
 	 * Create a sudoku field with prefilled values.
 	 *
-	 * @param predefinedFields
+	 * @param predefinedCells
 	 *            Amount of fields that should be prefilled
+	 * @throws Exception
 	 */
-	public Sudoku(final int predefinedFields) {
-		generate(predefinedFields);
+	public Sudoku(final int predefinedCells) throws Exception {
+		this();
+		if (generate(predefinedCells) == null)
+			throw new Exception("Cannot generate a valid field");
 	}
 
 	/**
 	 * Load sudoku field from String.
 	 *
-	 * @param sudokuField
+	 * @param predefinedField
 	 */
-	public Sudoku(final String sudokuField) {
-		if (sudokuField != null) {
-			field = SudokuField.loadFromString(sudokuField);
+	public Sudoku(final String predefinedField) {
+		if (predefinedField != null) {
+			field = SudokuField.loadFromString(predefinedField);
 		}
 	}
 
 	/**
 	 * Create a sudoku field with prefilled values.
 	 *
-	 * @param predefinedFields
+	 * @param predefinedCells
 	 *            Amount of fields that should be prefilled
 	 */
-	private void generate(final int predefinedFields) {
-		field = new SudokuField();
+	private SudokuField generate(final int predefinedCells) {
+		if (predefinedCells > 60)
+			throw new InvalidParameterException("predefinedCells must not be greater than 60");
 
-		Random r = new Random();
-		byte fieldsFilled = 0;
-		int tries = 0;
-		while (fieldsFilled < predefinedFields) {
-			byte row = (byte) r.nextInt(SudokuField.MAX);
-			byte column = (byte) r.nextInt(SudokuField.MAX);
+		for (byte row = 0; row < SudokuField.MAX; row++) {
+			for (byte column = 0; column < SudokuField.MAX; column++) {
+				while (field.getValue(row, column) == SudokuField.EMPTY) {
+					byte value = field.getRandomOption(row, column);
+					if (value == SudokuField.EMPTY)
+						return null;
 
-			if (field.getValue(row, column) == SudokuField.EMPTY) {
-				byte value = (byte) (r.nextInt(SudokuField.MAX) + 1);
-				while (!field.isOption(row, column, value)) {
-					value = (byte) (r.nextInt(SudokuField.MAX) + 1);
-					tries++;
+					@SuppressWarnings("null")
+					SudokuField backupField = new SudokuField(field);
+					field.setValue(row, column, value);
 
-					// prevent an infinite loop for unsolvable sudokus.
-					if (tries > (9 * 9 * 9))
-						return;
+					// call solve again -> if result = true, then return true
+					// and field is completely filled out
+					field = generate(predefinedCells);
+					if (field != null)
+						return field;
+					else {
+						// else undo change
+						field = backupField;
+						field.removeOption(row, column, value);
+					}
 				}
-
-				field.setValue(row, column, value);
-				fieldsFilled++;
 			}
 		}
+
+		// field should be completely filled now. Now clear cell until only
+		// amount of requested predefined cells are set
+		SudokuField preparedField = new SudokuField();
+		while (preparedField.numCellsFilled() < predefinedCells) {
+			SudokuPosition pos = preparedField.getRandomEmptyPosition();
+
+			if (pos == null) {
+				break;
+			} else {
+				preparedField.setValue(pos, field.getValue(pos));
+			}
+		}
+
+		return preparedField;
 	}
 
 	/**
@@ -73,6 +139,15 @@ public class Sudoku {
 	 */
 	public boolean isDebugMode() {
 		return debugMode;
+	}
+
+	/**
+	 * Returns amount of cells that are already filled out.
+	 *
+	 * @return
+	 */
+	public int numCellsFilled() {
+		return field.numCellsFilled();
 	}
 
 	/**
@@ -97,7 +172,7 @@ public class Sudoku {
 	 */
 	public boolean solve() {
 		// as long as there are still empty cells
-		while (field.countRemainingEmptyCells() > 0) {
+		while (field.numRemainingEmptyCells() > 0) {
 
 			// check empty cells with least options first
 			SudokuPosition pos = field.getBestEmptyPosition();
@@ -116,7 +191,8 @@ public class Sudoku {
 					return false;
 				}
 
-				SudokuField backupField = field.clone();
+				@SuppressWarnings("null")
+				SudokuField backupField = new SudokuField(field);
 				field.setValue(pos, newValue);
 
 				if (debugMode) {
@@ -155,11 +231,11 @@ public class Sudoku {
 		int depth = 1;
 
 		// as long as there are still empty cells
-		while (field.countRemainingEmptyCells() > 0) {
+		while (field.numRemainingEmptyCells() > 0) {
 
 			SudokuPosition pos = field.getNextEmptyPosition(null);
 			while (pos != null) {
-				byte numOptions = field.countRemainingOptions(pos);
+				byte numOptions = field.numRemainingOptions(pos);
 
 				// check all options that are allowed with current depth
 				while ((0 < numOptions) && (numOptions <= depth)) {
@@ -173,7 +249,9 @@ public class Sudoku {
 						return false;
 					}
 
-					SudokuField backupField = field.clone();
+					@SuppressWarnings("null")
+					@NonNull
+					SudokuField backupField = new SudokuField(field);
 					field.setValue(pos, newValue);
 
 					if (debugMode) {
@@ -193,7 +271,7 @@ public class Sudoku {
 							System.out.println("UNDO value \"" + newValue + "\" at " + pos);
 						}
 
-						numOptions = field.countRemainingOptions(pos);
+						numOptions = field.numRemainingOptions(pos);
 					}
 				}
 

@@ -27,21 +27,12 @@ public final class SudokuPosition {
 		this.column = (byte) column;
 	}
 
-	@Override
-	public SudokuPosition clone() {
-		return new SudokuPosition(row, column);
-	}
-
 	public boolean equals(final SudokuPosition pos) {
 		return (pos != null) && (pos.getRow() == row) && (pos.getColumn() == column);
 	}
 
 	public byte getColumn() {
 		return column;
-	}
-
-	public SudokuPosition getNextPosition() {
-		return SudokuField.getNextPosition(this);
 	}
 
 	public byte getRow() {

@@ -1,11 +1,18 @@
 package sudoku;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 
 import org.eclipse.jdt.annotation.NonNull;
 
 public class SudokuField {
+	/**
+	 * Number of cells.
+	 */
+	public static final byte CELLS = 81;
+
 	/**
 	 * Value "0" for empty cell.
 	 */
@@ -29,11 +36,7 @@ public class SudokuField {
 	 */
 	private static boolean[] createNewBoolArray(final byte size, final boolean defaultValue) {
 		boolean[] array = new boolean[size];
-
-		for (byte i = 0; i < size; i++) {
-			array[i] = defaultValue;
-		}
-
+		Arrays.fill(array, defaultValue);
 		return array;
 	}
 
@@ -47,9 +50,7 @@ public class SudokuField {
 		boolean[][] array = new boolean[rowSize][columnSize];
 
 		for (int row = 0; row < rowSize; row++) {
-			for (int column = 0; column < columnSize; column++) {
-				array[row][column] = defaultValue;
-			}
+			Arrays.fill(array[row], defaultValue);
 		}
 
 		return array;
@@ -69,11 +70,12 @@ public class SudokuField {
 			throw new IndexOutOfBoundsException("pos has to be between 0 and 8");
 
 		if (sector > 6) {
-			sector = sector - 6;
+			sector = sector - 7;
 		} else if (sector > 3) {
-			sector = sector - 3;
+			sector = sector - 4;
+		} else {
+			sector = sector - 1;
 		}
-		sector = sector - 1;
 
 		if (pos > 5) {
 			pos = pos - 6;
@@ -177,7 +179,7 @@ public class SudokuField {
 	private final boolean[][][] options;
 
 	/**
-	 * Store all remaining options of all cells.
+	 * Store amount of cells that are still empty.
 	 */
 	private int remainingEmptyCells = 0;
 
@@ -193,24 +195,20 @@ public class SudokuField {
 		field = new byte[MAX][MAX];
 		remainingOptions = new byte[MAX][MAX];
 		options = new boolean[MAX][MAX][MAX];
-		remainingEmptyCells = MAX * MAX;
+		remainingEmptyCells = CELLS;
 
 		for (byte row = 0; row < MAX; row++) {
+			Arrays.fill(field[row], EMPTY);
+			Arrays.fill(remainingOptions[row], MAX);
+
 			for (byte column = 0; column < MAX; column++) {
-				// reset field
-				field[row][column] = EMPTY;
-
-				remainingOptions[row][column] = MAX;
-
-				// reset all options by enabling them
-				for (byte value = 0; value < MAX; value++) {
-					options[row][column][value] = true;
-				}
+				Arrays.fill(options[row][column], true);
 			}
 		}
 	}
 
 	/**
+	 * Constructor.
 	 *
 	 * @param predefinedField
 	 */
@@ -225,74 +223,34 @@ public class SudokuField {
 		}
 	}
 
+	/**
+	 * Constructor.
+	 *
+	 * @param fromField
+	 */
 	public SudokuField(final @NonNull SudokuField fromField) {
-		field = new byte[MAX][MAX];
-		remainingOptions = new byte[MAX][MAX];
-		options = new boolean[MAX][MAX][MAX];
-		remainingEmptyCells = MAX * MAX;
-
-		for (byte row = 0; row < MAX; row++) {
-			for (byte column = 0; column < MAX; column++) {
-				// copy values
-				field[row][column] = fromField.field[row][column];
-
-				// copy remaining options per cell
-				remainingOptions[row][column] = fromField.remainingOptions[row][column];
-
-				// copy options
-				for (byte value = 0; value < MAX; value++) {
-					options[row][column][value] = fromField.options[row][column][value];
-				}
-			}
-		}
-
-		// copy remaining
+		field = fromField.field.clone();
+		options = fromField.options.clone();
+		remainingOptions = fromField.remainingOptions.clone();
 		remainingEmptyCells = fromField.remainingEmptyCells;
-	}
 
-	@Override
-	public SudokuField clone() {
-		return new SudokuField(this);
-	}
-
-	/**
-	 * Count remaining empty cells.
-	 *
-	 * @return Number of empty cells.
-	 */
-	public int countRemainingEmptyCells() {
-		return remainingEmptyCells;
-	}
-
-	/**
-	 * Count all options of specified cell.
-	 *
-	 * @param pos
-	 * @return Number of all available options of specified cell.
-	 */
-	public byte countRemainingOptions(final @NonNull SudokuPosition pos) {
-		return remainingOptions[pos.getRow()][pos.getColumn()];
-	}
-
-	/**
-	 * Count all options of all empty cells.
-	 *
-	 * @return Number of all available options of all empty cells.
-	 */
-	public int countRemainingOptionsTotal() {
-		int num = 0;
 		for (byte row = 0; row < MAX; row++) {
+			field[row] = fromField.field[row].clone();
+			remainingOptions[row] = fromField.remainingOptions[row].clone();
+			options[row] = fromField.options[row].clone();
 			for (byte column = 0; column < MAX; column++) {
-				num += remainingOptions[row][column];
+				options[row][column] = fromField.options[row][column].clone();
 			}
 		}
-
-		return num;
 	}
 
+	/**
+	 *
+	 * @return
+	 */
 	public SudokuPosition getBestEmptyPosition() {
 		List<SudokuPosition> positions = new LinkedList<SudokuPosition>();
-		byte minOptions = MAX;
+		byte minOptions = MAX + 1;
 
 		for (byte row = 0; row < MAX; row++) {
 			for (byte column = 0; column < MAX; column++) {
@@ -311,10 +269,22 @@ public class SudokuField {
 			}
 		}
 
-		if (positions.isEmpty())
-			return null;
-		else
-			return positions.get(0);
+		return positions.get(0);
+	}
+
+	/**
+	 * Return copy of the field.
+	 *
+	 * @return
+	 */
+	public byte[][] getField() {
+		byte[][] newField = field.clone();
+
+		for (byte row = 0; row < MAX; row++) {
+			newField[row] = field[row].clone();
+		}
+
+		return newField;
 	}
 
 	/**
@@ -325,6 +295,9 @@ public class SudokuField {
 	 * @return cell that is empty or null if no empty cell can be found
 	 */
 	public SudokuPosition getNextEmptyPosition(final SudokuPosition pos) {
+		if (remainingEmptyCells == 0)
+			return null;
+
 		// if pos == null, test start position first
 		if (pos == null) {
 			if (field[SudokuPosition.START.getRow()][SudokuPosition.START.getColumn()] == EMPTY)
@@ -334,10 +307,14 @@ public class SudokuField {
 		SudokuPosition nextEmptyPosition = pos;
 
 		int i = 0;
-		while (i < (MAX * MAX)) {
+		while (i < CELLS) {
 			nextEmptyPosition = getNextPosition(nextEmptyPosition);
 
-			if (nextEmptyPosition == null || field[nextEmptyPosition.getRow()][nextEmptyPosition.getColumn()] == EMPTY)
+			if (nextEmptyPosition == null) {
+				nextEmptyPosition = SudokuPosition.START;
+			}
+
+			if ((nextEmptyPosition != null) && (field[nextEmptyPosition.getRow()][nextEmptyPosition.getColumn()] == EMPTY))
 				return nextEmptyPosition;
 
 			i++;
@@ -349,19 +326,98 @@ public class SudokuField {
 	/**
 	 * Return the first value that would be valid for this cell.
 	 *
-	 * @param pos
+	 * @param row
+	 * @param column
 	 * @return value of next option or EMPTY (0) if no options left
 	 */
-	public byte getNextOption(final @NonNull SudokuPosition pos) {
-		byte row = pos.getRow();
-		byte column = pos.getColumn();
-
+	public byte getNextOption(final byte row, final byte column) {
+		boolean[] opt = options[row][column];
 		for (byte value = 0; value < MAX; value++) {
-			if (options[row][column][value])
+			if (opt[value])
 				return (byte) (value + 1);
 		}
 
 		return EMPTY;
+	}
+
+	/**
+	 * Return the first value that would be valid for this cell.
+	 *
+	 * @param pos
+	 * @return value of next option or EMPTY (0) if no options left
+	 */
+	public byte getNextOption(final @NonNull SudokuPosition pos) {
+		return getNextOption(pos.getRow(), pos.getColumn());
+	}
+
+	/**
+	 * Returns an empty position.
+	 * 
+	 * @return
+	 */
+	public SudokuPosition getRandomEmptyPosition() {
+		if (remainingEmptyCells == 0)
+			return null;
+
+		Random r = new Random();
+
+		byte row = (byte) r.nextInt(SudokuField.MAX);
+		byte column = (byte) r.nextInt(SudokuField.MAX);
+
+		int tries = 0;
+		while (field[row][column] != SudokuField.EMPTY) {
+			if (tries > 5)
+				return getNextEmptyPosition(null);
+
+			row = (byte) r.nextInt(SudokuField.MAX);
+			column = (byte) r.nextInt(SudokuField.MAX);
+			tries++;
+		}
+
+		return new SudokuPosition(row, column);
+	}
+
+	/**
+	 * Return a random value that would be valid for this cell.
+	 *
+	 * @param row
+	 * @param column
+	 * @return value of next option or EMPTY (0) if no options left
+	 */
+	public byte getRandomOption(final byte row, final byte column) {
+		byte max = remainingOptions[row][column];
+
+		if (max == 0)
+			return EMPTY;
+
+		// choose random position of valid remaining options
+		Random r = new Random();
+		byte n = (byte) r.nextInt(max);
+
+		boolean[] opt = options[row][column];
+
+		// search the chosen remaining option and return it
+		for (byte value = 0; value < MAX; value++) {
+			if (opt[value]) {
+				if (n == 0)
+					return (byte) (value + 1);
+				else {
+					n--;
+				}
+			}
+		}
+
+		return EMPTY;
+	}
+
+	/**
+	 * Return a random value that would be valid for this cell.
+	 *
+	 * @param pos
+	 * @return value of next option or EMPTY (0) if no options left
+	 */
+	public byte getRandomOption(final @NonNull SudokuPosition pos) {
+		return getRandomOption(pos.getRow(), pos.getColumn());
 	}
 
 	/**
@@ -382,6 +438,15 @@ public class SudokuField {
 	 */
 	public byte getValue(final @NonNull SudokuPosition pos) {
 		return field[pos.getRow()][pos.getColumn()];
+	}
+
+	/**
+	 * Check if current field is completely empty.
+	 *
+	 * @return True if field is empty.
+	 */
+	public boolean isEmpty() {
+		return remainingEmptyCells == CELLS;
 	}
 
 	/**
@@ -454,6 +519,63 @@ public class SudokuField {
 	}
 
 	/**
+	 * Returns amount of cells that are already filled out.
+	 *
+	 * @return
+	 */
+	public int numCellsFilled() {
+		return CELLS - remainingEmptyCells;
+	}
+
+	/**
+	 * Count remaining empty cells.
+	 *
+	 * @return Number of empty cells.
+	 */
+	public int numRemainingEmptyCells() {
+		return remainingEmptyCells;
+	}
+
+	/**
+	 * Count all options of specified cell.
+	 *
+	 * @param row
+	 *            current row [0-8] to place the number
+	 * @param column
+	 *            current cell [0-8] to place the number
+	 * @return Number of all available options of specified cell.
+	 */
+	public byte numRemainingOptions(final byte row, final byte column) {
+		return remainingOptions[row][column];
+	}
+
+	/**
+	 * Count all options of specified cell.
+	 *
+	 * @param pos
+	 * @return Number of all available options of specified cell.
+	 */
+	public byte numRemainingOptions(final @NonNull SudokuPosition pos) {
+		return remainingOptions[pos.getRow()][pos.getColumn()];
+	}
+
+	/**
+	 * Count all options of all empty cells.
+	 *
+	 * @return Number of all available options of all empty cells.
+	 */
+	public int numRemainingOptionsTotal() {
+		int num = 0;
+		for (byte row = 0; row < MAX; row++) {
+			for (byte column = 0; column < MAX; column++) {
+				num += remainingOptions[row][column];
+			}
+		}
+
+		return num;
+	}
+
+	/**
 	 * Print Sudoku to sysout.
 	 *
 	 * @param sudokuField
@@ -468,7 +590,7 @@ public class SudokuField {
 	 * @param sudokuField
 	 */
 	public void print(final byte highlightRow, final byte highlightColumn) {
-		System.out.println(toString(highlightRow, highlightColumn));
+		System.out.println(toString(highlightRow, highlightColumn, true));
 	}
 
 	/**
@@ -530,9 +652,7 @@ public class SudokuField {
 			remainingOptions[row][column] = 0;
 
 			// reset all options for the current cell
-			for (byte currentValue = 0; currentValue < MAX; currentValue++) {
-				options[row][column][currentValue] = false;
-			}
+			Arrays.fill(options[row][column], false);
 
 			byte valueIndex = (byte) (value - 1);
 			for (byte i = 0; i < MAX; i++) {
@@ -578,7 +698,16 @@ public class SudokuField {
 	 */
 	@Override
 	public String toString() {
-		return toString((byte) -1, (byte) -1);
+		return toString((byte) -1, (byte) -1, false);
+	}
+
+	/**
+	 * Print Sudoku to String.
+	 *
+	 * @param showInfoText
+	 */
+	public String toString(final boolean showInfoText) {
+		return toString((byte) -1, (byte) -1, showInfoText);
 	}
 
 	/**
@@ -586,8 +715,9 @@ public class SudokuField {
 	 *
 	 * @param highlightRow
 	 * @param highlightColumn
+	 * @param showInfoText
 	 */
-	public String toString(final byte highlightRow, final byte highlightColumn) {
+	public String toString(final byte highlightRow, final byte highlightColumn, final boolean showInfoText) {
 		StringBuilder sb = new StringBuilder();
 		sb.append("+-----------+-----------+-----------+");
 		sb.append(System.lineSeparator());
@@ -614,8 +744,10 @@ public class SudokuField {
 				sb.append(System.lineSeparator());
 			}
 		}
-		sb.append("Remaining: " + countRemainingEmptyCells() + ", Options: " + countRemainingOptionsTotal());
-		sb.append(System.lineSeparator());
+		if (showInfoText) {
+			sb.append("Remaining: " + numRemainingEmptyCells() + ", Options: " + numRemainingOptionsTotal());
+			sb.append(System.lineSeparator());
+		}
 
 		return sb.toString();
 	}

@@ -6,6 +6,35 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
 public class SudokuTests {
+	private SudokuField createField() {
+		final SudokuField field = new SudokuField();
+		field.setValue((byte) 0, (byte) 0, (byte) 1);
+		field.setValue((byte) 1, (byte) 1, (byte) 2);
+		field.setValue((byte) 2, (byte) 2, (byte) 3);
+		field.setValue((byte) 3, (byte) 3, (byte) 4);
+		field.setValue((byte) 4, (byte) 4, (byte) 5);
+		field.setValue((byte) 5, (byte) 5, (byte) 6);
+		field.setValue((byte) 6, (byte) 6, (byte) 7);
+		field.setValue((byte) 7, (byte) 7, (byte) 8);
+		field.setValue((byte) 8, (byte) 8, (byte) 9);
+
+		return field;
+	}
+
+	@SuppressWarnings("null")
+	@Test
+	public void testCloneField() {
+		SudokuField field1 = new SudokuField();
+		SudokuField field2 = new SudokuField(field1);
+
+		assertEquals(field1.toString(), field2.toString());
+
+		field1 = createField();
+		field2 = new SudokuField(field1);
+
+		assertEquals(field1.toString(), field2.toString());
+	}
+
 	@Test
 	public void testGetColumnBySectorPos() {
 		assertTrue(SudokuField.getColumnBySectorPos(1, 0) == 0);
@@ -133,22 +162,33 @@ public class SudokuTests {
 	}
 
 	@Test
+	public void testLoadFieldFromByteArray() {
+		SudokuField field1 = new SudokuField();
+		String fieldAsText1 = field1.toString();
+		SudokuField field2 = new SudokuField(field1.getField());
+
+		assertEquals(fieldAsText1, field2.toString());
+
+		field1 = createField();
+		fieldAsText1 = field1.toString();
+		field2 = new SudokuField(field1.getField());
+
+		assertEquals(fieldAsText1, field2.toString());
+	}
+
+	@SuppressWarnings("null")
+	@Test
 	public void testLoadFieldFromString() {
-		SudokuField fieldBefore = new SudokuField();
-		fieldBefore.setValue((byte) 0, (byte) 0, (byte) 1);
-		fieldBefore.setValue((byte) 1, (byte) 1, (byte) 2);
-		fieldBefore.setValue((byte) 2, (byte) 2, (byte) 3);
-		fieldBefore.setValue((byte) 3, (byte) 3, (byte) 4);
-		fieldBefore.setValue((byte) 4, (byte) 4, (byte) 5);
-		fieldBefore.setValue((byte) 5, (byte) 5, (byte) 6);
-		fieldBefore.setValue((byte) 6, (byte) 6, (byte) 7);
-		fieldBefore.setValue((byte) 7, (byte) 7, (byte) 8);
-		fieldBefore.setValue((byte) 8, (byte) 8, (byte) 9);
+		SudokuField field1 = new SudokuField();
+		String fieldAsText1 = field1.toString();
+		SudokuField field2 = SudokuField.loadFromString(fieldAsText1);
 
-		String fieldAsTextBefore = fieldBefore.toString();
-		SudokuField fieldAfter = SudokuField.loadFromString(fieldAsTextBefore);
-		String fieldAsTextAfter = fieldAfter.toString();
+		assertEquals(fieldAsText1, field2.toString());
 
-		assertEquals(fieldAsTextBefore, fieldAsTextAfter);
+		field1 = createField();
+		fieldAsText1 = field1.toString();
+		field2 = SudokuField.loadFromString(fieldAsText1);
+
+		assertEquals(fieldAsText1, field2.toString());
 	}
 }
